@@ -1,26 +1,25 @@
-
 var model;
 
 async function loadModel() {
-    model = await tf.loadGraphModel('TFJS/model.json')
-}
+    model = await tf.loadGraphModel('TFJS/model.json');
+  }
 
 function predictImage() {
-    // console.log('processing ...');
-
+    // console.log('processing...')
+    
     let image = cv.imread(canvas);
     cv.cvtColor(image, image, cv.COLOR_RGBA2GRAY, 0);
     cv.threshold(image, image, 175, 255, cv.THRESH_BINARY);
 
     let contours = new cv.MatVector();
     let hierarchy = new cv.Mat();
-    // You can try more different parameters
     cv.findContours(image, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
-
+    
     let cnt = contours.get(0);
     let rect = cv.boundingRect(cnt);
     image = image.roi(rect);
 
+    // resize
     var height = image.rows;
     var width = image.cols;
 
@@ -31,20 +30,22 @@ function predictImage() {
     } else {
         width = 20;
         const scaleFactor = image.cols / width;
-        height = Math.round(image.rows / scaleFactor);
+        height = Math.round(image.rows/scaleFactor);
     }
 
     let newSize = new cv.Size(width, height);
-    cv.resize(image, image, newSize, 0, 0, cv.INTER_AREA)
+    cv.resize(image, image, newSize, 0, 0, cv.INTER_AREA);
 
-    const LEFT = Math.ceil(4 + (20 - width) / 2);
-    const RIGHT = Math.floor(4 + (20 - width) / 2);
-    const TOP = Math.ceil(4 + (20 - height) / 2);
-    const BOTTOM = Math.floor(4 + (20 - height) / 2);
+    // add 4px from each side to math model
+    const LEFT = Math.ceil(4 + (20 - width)/2);
+    const RIGHT = Math.floor(4 + (20 - width)/2);
+    const TOP = Math.ceil(4 + (20 - height)/2);
+    const BOTTOM = Math.floor(4 + (20 - height)/2);
     // console.log(`top: ${TOP}, bottom: ${BOTTOM}, left: ${LEFT}, right: ${RIGHT}`);
 
+    //create border
     const BLACK = new cv.Scalar(0, 0, 0, 0);
-    cv.copyMakeBorder(image, image, TOP, BOTTOM, LEFT, RIGHT, cv.BORDER_CONSTANT, BLACK);
+    cv.copyMakeBorder(image, image, TOP, BOTTOM, LEFT, RIGHT, cv.BORDER_CONSTANT, BLACK)
 
     // Centre of Mass
     cv.findContours(image, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
@@ -75,23 +76,22 @@ function predictImage() {
 
 
     const X = tf.tensor([pixelValues]);
-
     // console.log(`Shape of Tensor: ${X.shape}`);
     // console.log(`dtype of Tensor: ${X.dtype}`);
 
     const result = model.predict(X);
     result.print();
+
     const output = result.dataSync()[0];
 
-
     // console.log(tf.memory());
-    
-    // Testing Only (delete later)
+
+    // // Testing Only
     // const outputCanvas = document.createElement('CANVAS');
     // cv.imshow(outputCanvas, image);
     // document.body.appendChild(outputCanvas);
 
-    // Cleanup
+    //Clean up
     image.delete();
     contours.delete();
     cnt.delete();
@@ -101,5 +101,4 @@ function predictImage() {
     result.dispose();
 
     return output;
-
 }
